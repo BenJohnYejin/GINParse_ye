@@ -1,0 +1,5 @@
+# gnss_parse_config
+
+dir_src_gnss       =D:\08_data_sim\G5\ # (src gnss dir)
+gnss_externsion    =.gps       # (src gnss externsion)
+last_gnss_nema_label =4        # (gnss last nema label code(oct code GGA 0001 VEL 0002 HEA 0004 VTG 0010 GST 0020 ZDA 0040 PVT 0100 REL 0200 PVT 0002 TAR 0004 )
