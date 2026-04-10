@@ -1,5 +1,6 @@
 # gnss_parse_config
 
-dir_src_gnss       =D:\08_data_sim\G5\ # (src gnss dir)
+dir_src_gnss       =D:\ # (src gnss dir)
 gnss_externsion    =.gps       # (src gnss externsion)
-last_gnss_nema_label =4        # (gnss last nema label code(oct code GGA 0001 VEL 0002 HEA 0004 VTG 0010 GST 0020 ZDA 0040 PVT 0100 REL 0200 PVT 0002 TAR 0004 )
+gnss_mask          =11         # (src gnss mask) 有航向变为31 无航向无GST 11 无航向有GST 27
+last_gnss_nema_label =3        # (gnss last nema label code(oct code GGA 0001 VEL 0002 HEA 0004 GST 0020 ZDA 0010) GST结尾是16 VEL结尾是2 ZDA结尾是8 RMC是3

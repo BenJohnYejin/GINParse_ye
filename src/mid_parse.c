@@ -604,6 +604,7 @@ int Recv_gga(uint8_t ch1) {
 		if (ch1 == ',') {
             sx_gnss_info.age = (str2num((const char*)str_parse, 0, 10) * 10);
 			flag_parse_gnss = 0;
+            index_parse_gnss = 0;
 			memset(str_parse, '\0', GNSS_MAX_NUM);
 			ret = 1;
 		}
@@ -612,6 +613,102 @@ int Recv_gga(uint8_t ch1) {
 	}
 
 	return ret;
+}
+
+/* Parse GMC sentence from GNSS data --------------------------------------------
+ * Parses a GMC sentence and updates GNSS information structure.
+ * args   : uint8_t ch1   I   Input character
+ * return : int           R   1 if complete, -1 on error, 0 otherwise
+ *        0      1      2        3    4           5    6       7     8       9 10
+$GNRMC,061937.00,A,3024.46135200,N,11424.56160238,E,24.0486,222.6154,090426,0.0,E,A*1D
+ *-------------------------------------------------------------------------------*/
+int Recv_rmc(uint8_t ch1) {
+    int ret = 0;
+    switch (flag_parse_gnss) {
+    case 0:
+        if (ch1 == ',') {
+            flag_parse_gnss = 1;
+            index_parse_gnss = 0;
+            str_parse[0] = '\0';
+            memset(str_parse , '\0' , GNSS_MAX_NUM);
+        }
+        break;
+    case 1:
+        if (ch1 == ',') {
+            flag_parse_gnss = 2;
+        }
+        break;
+    case 2:
+        if (ch1 == ',') {
+            flag_parse_gnss = 3;
+            if (index_parse_gnss > 1) {
+                double f = str2num((const char*)str_parse, 0, 20);
+                pos_int = (int)(f / 100);
+                tmp = pos_int + (f - pos_int * 100) / 60.0;
+                sx_gnss_info.lat = tmp * DEG;
+            }
+            else  ret = -1;
+            index_parse_gnss = 0;
+            str_parse[0] = '\0';
+            memset(str_parse , '\0' , GNSS_MAX_NUM);
+        }
+        else str_parse[index_parse_gnss++] = ch1;
+        break;
+
+    case 3:
+        if (ch1 == ',') { flag_parse_gnss = 4; }
+        else if (ch1 == 'S') { sx_gnss_info.lat = -1.0 * sx_gnss_info.lat; }
+        break;
+
+    case 4:
+        if (ch1 == ',') {
+            flag_parse_gnss = 5;
+            if (index_parse_gnss > 1) {
+                double f = str2num((const char*)str_parse, 0, 20);
+                pos_int = (int)(f / 100);
+                tmp = pos_int + (f - pos_int * 100) / 60.0;
+                sx_gnss_info.lon = tmp * DEG;
+            }
+            index_parse_gnss = 0;
+            str_parse[0] = '\0';
+            memset(str_parse , '\0' , GNSS_MAX_NUM);
+        }
+        else  str_parse[index_parse_gnss++] = ch1;
+        break;
+
+    case 5:
+        if (ch1 == ',') flag_parse_gnss = 6;
+        else if (ch1 == 'W')	sx_gnss_info.lon = -1.0 * sx_gnss_info.lon;
+        break;
+
+    case 6:
+        if (ch1 == ',') {
+            flag_parse_gnss = 7;
+            tmp = str2num((const char*)str_parse, 0, 10);
+            tmp *= 0.51444;
+            index_parse_gnss = 0;
+            str_parse[0] = '\0';
+            memset(str_parse, '\0', GNSS_MAX_NUM);
+        }
+        else  str_parse[index_parse_gnss++] = ch1;
+        break;
+    case 7:
+        if (ch1 == ',') {
+            flag_parse_gnss = 0;
+            double trjMotion = str2num((const char*)str_parse, 0, 10);
+            sx_gnss_info.heading_motion = trjMotion * DEG;
+            trjMotion *= DEG;
+            sx_gnss_info.vel_east  = tmp * sin(trjMotion);
+            sx_gnss_info.vel_north = tmp * cos(trjMotion);
+            index_parse_gnss = 0;
+            ret = 1;
+            str_parse[0] = '\0';
+            memset(str_parse, '\0', GNSS_MAX_NUM);
+        }
+        else  str_parse[index_parse_gnss++] = ch1;
+        break;
+    }
+    return ret;
 }
 
 /* Parse GST sentence from GNSS data --------------------------------------------
@@ -709,23 +806,45 @@ int Reci_zda(uint8_t ch1) {
 	double zda_f;
 
 	switch (flag_parse_gnss) {
+    case 15:
+        if (ch1 == ',') {
+            flag_parse_gnss = 1;
+            if (index_parse_gnss > 1) {
+                zda_f = str2num((const char*)str_parse, 0, 10);
+                sx_gnss_info.date.hour = (uint8_t)(zda_f / 10000);
+                sx_gnss_info.date.min = (uint8_t)(zda_f / 100 - (uint32_t)sx_gnss_info.date.hour * 100);
+                sx_gnss_info.date.sec = (zda_f - (uint32_t)sx_gnss_info.date.hour * 10000 - (uint32_t)sx_gnss_info.date.min * 100)*1e3;
+            }
+            else {
+                ret = -1;
+            }
+            index_parse_gnss = 0;
+            str_parse[0] = '\0';
+            memset(str_parse , '\0' , GNSS_MAX_NUM);
+        }
+        else  str_parse[index_parse_gnss++] = ch1;
+        break;
 	case 0:
-		if (ch1 == ',') {
-			flag_parse_gnss = 1;
-			if (index_parse_gnss > 1) {
-				zda_f = str2num((const char*)str_parse, 0, 10);
-				sx_gnss_info.date.hour = (uint8_t)(zda_f / 10000);
-				sx_gnss_info.date.min = (uint8_t)(zda_f / 100 - (uint32_t)sx_gnss_info.date.hour * 100);
-				sx_gnss_info.date.sec = (zda_f - (uint32_t)sx_gnss_info.date.hour * 10000 - (uint32_t)sx_gnss_info.date.min * 100)*1e3;
-			}
-			else {
-				ret = -1;
-			}
-			index_parse_gnss = 0;
-			str_parse[0] = '\0';
-			memset(str_parse , '\0' , GNSS_MAX_NUM);
-		}
-		else  str_parse[index_parse_gnss++] = ch1;
+        if (ch1 == ',') {
+            flag_parse_gnss = 1;
+            if (index_parse_gnss > 1) {
+                zda_f = str2num((const char*)str_parse, 0, 10);
+                sx_gnss_info.date.hour = (uint8_t)(zda_f / 10000);
+                sx_gnss_info.date.min = (uint8_t)(zda_f / 100 - (uint32_t)sx_gnss_info.date.hour * 100);
+                sx_gnss_info.date.sec = (zda_f - (uint32_t)sx_gnss_info.date.hour * 10000 - (uint32_t)sx_gnss_info.date.min * 100)*1e3;
+            }
+            else {
+                ret = -1;
+            }
+            index_parse_gnss = 0;
+            str_parse[0] = '\0';
+            memset(str_parse , '\0' , GNSS_MAX_NUM);
+        }
+        else
+            str_parse[index_parse_gnss++] = ch1;
+
+//        if (ch1 == ',') flag_parse_gnss = 15;
+//        else  str_parse[index_parse_gnss++] = ch1;
 		break;
 
 	case 1:
@@ -757,7 +876,7 @@ int Reci_zda(uint8_t ch1) {
 		if (ch1 == ',') {
 			flag_parse_gnss = 0;
 			sx_gnss_info.date.year = str2num((const char*)str_parse, 0, 4);
-			calender2weekSecs(&sx_gnss_info.date, &sx_gnss_info.week_secs);
+            calender2weekSecs(&sx_gnss_info.date, &sx_gnss_info.week_secs);
 			index_parse_gnss = 0;
 			str_parse[0] = '\0';
 			memset(str_parse , '\0' , GNSS_MAX_NUM);
@@ -936,9 +1055,14 @@ int Reci_vel(uint8_t ch1) {
 		}
 		break;
 	case 4:
-		if (ch1 == ',') {
-			flag_parse_gnss = 5;
-		}
+        if (ch1 == ',') {
+            flag_parse_gnss = 5;
+            sx_gnss_info.week_secs.ui_week = str2num((const char*)str_parse, 0, 10);
+            index_parse_gnss = 0;
+            str_parse[0] = '\0';
+            memset(str_parse, '\0', GNSS_MAX_NUM);
+        }
+        else  str_parse[index_parse_gnss++] = ch1;
 		break;
 	case 5:
 		if (ch1 == ',') {
@@ -1526,8 +1650,12 @@ void gnss_parse(uint8_t ch1)
 		check_parse_nema ^= ch1;
 		if (ch1 == ',')
 		{
+            /*RMC*/
+            if (Frame_name[1] == 'M' && Frame_name[2] == 'C') {
+                Rflag = 2;
+            }
 			/*GST*/
-			if (Frame_name[1] == 'S' && Frame_name[2] == 'T') {
+            else if (Frame_name[1] == 'S' && Frame_name[2] == 'T') {
 				Rflag = 3;
 			}
 			/*GGA*/
@@ -1535,7 +1663,7 @@ void gnss_parse(uint8_t ch1)
 				Rflag = 4;
 			}
 			/*BESTVEL*/
-			else if (Frame_name[1] == 'T' && Frame_name[2] == 'V') {
+            else if (Frame_name[1] == 'T' && (Frame_name[2] == 'V' || Frame_name[6] == 'V')) {
 				Rflag = 5;
 			}
 			/*ZDA*/
@@ -1558,6 +1686,7 @@ void gnss_parse(uint8_t ch1)
 			else if (Frame_name[2] == 'T' && Frame_name[3] == 'A') {
 				Rflag = 10;
 			}
+
             /*PSSN*/
             else if (Frame_name[0] == 'S' && Frame_name[1] == 'N') {
                 Rflag = 22;
@@ -1576,6 +1705,18 @@ void gnss_parse(uint8_t ch1)
 			}
 		}
 		break;
+
+    case 2:
+        check_parse_nema ^= ch1;
+        ret = Recv_rmc(ch1);
+        if (1 == ret) {
+            Rflag = 0;
+            sx_gnss_info.GNSSFlag |= GNSSPARSE_RMC;
+            sx_gnss_info.last = GNSSPARSE_RMC;
+        }
+        else if (-1 == ret) {
+            Rflag = 0;
+        }break;
 
 	case 3:
 		check_parse_nema ^= ch1;

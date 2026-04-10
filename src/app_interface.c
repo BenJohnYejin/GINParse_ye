@@ -387,7 +387,7 @@ void sim2kfapp(sim32bin_t* ptr_sim, KFAPP_Update* ptr_UpPara) {
 
 
 
-int gnss_parse_by_file(const char* file_name_gnss, gnss_info_t* px_gnss, gnss_t* gnss_data, int last_label)
+int gnss_parse_by_file(const char* file_name_gnss, gnss_info_t* px_gnss, gnss_t* gnss_data, KFAPP_ConfigPara *ptr_config)
 {
 	FILE* fp_gnss = fopen(file_name_gnss, "rb");
 	if (!fp_gnss) return 2;
@@ -407,9 +407,10 @@ int gnss_parse_by_file(const char* file_name_gnss, gnss_info_t* px_gnss, gnss_t*
 	while (index_gnss < len_gnss)
 	{
 		gnss_parse(buff_gnss[index_gnss++]);
-        if (GNSSPARSE_PARSE_NOW == px_gnss->GNSSFlag && last_label == px_gnss->last)
+        if (ptr_config->gnss_mask == px_gnss->GNSSFlag && ptr_config->last_label == px_gnss->last)
 		{
 			add_gnss(px_gnss, gnss_data);
+            memset(px_gnss,0,sizeof(gnss_info_t));
 			px_gnss->GNSSFlag = 0;
             px_gnss->last = 0;
 		}

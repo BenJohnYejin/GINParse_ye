@@ -16,7 +16,8 @@ static char* format_time = "%10.3f\n";
 CONFIG_t s_config[] = {
     { "dir_src_gnss"        ,2  ,  (void*)&configPara.srcfile_gnss, "src gnss dir"},
     { "gnss_externsion"        ,2  ,  (void*)&configPara.pattern_extertion, "src gnss externsion"},
-    { "last_gnss_nema_label" ,0  ,  (void*)&configPara.last_label, "gnss last nema label code(oct code GGA 0001 VEL 0002 HEA 0004 VTG 0010 GST 0020 ZDA 0040 PVT 0100 REL 0200 PVT 0002 TAR 0004 "},
+    { "gnss_mask"        ,0  ,  (void*)&configPara.gnss_mask, "src gnss mask"},
+    { "last_gnss_nema_label" ,0  ,  (void*)&configPara.last_label, "gnss last nema label code(oct code GGA 0001 VEL 0002 HEA 0004 GST 0020 ZDA 0010"},
 
 //    { "gnss_enable"          ,6  ,  (void*)&configPara.gnss_enable, "enable parse gnss file(0 no 1 yes)"},
 
@@ -146,7 +147,7 @@ static char  file_config[128] = "./gnss_parse_config.txt";
 int main(int argc, char* argv[]) {
 	/* load config*/
 	loadconfigs(file_config, s_config);
-    saveconfigs(file_config,"w","gnss_parse_config", s_config);
+    //saveconfigs(file_config,"w","gnss_parse_config", s_config);
 
 	file_list_t* file_list_;
 	file_list_ = getFileList();
@@ -165,7 +166,7 @@ int main(int argc, char* argv[]) {
 		char* ptr = strrchr(file_name_sim, '.');
 		file_name_sim[ptr - file_name_sim] = '\0';
 		strcat(file_name_sim, ".lat");
-        gnss_parse_by_file(file_name_nav, px_gnss, &gnss_data, configPara.last_label);
+        gnss_parse_by_file(file_name_nav, px_gnss, &gnss_data, &configPara);
 		print_gnss(file_name_sim, &gnss_data);
         if(gnss_data.cnt > 0){
             gnss_data.cnt = 0;

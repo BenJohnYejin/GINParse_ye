@@ -88,6 +88,7 @@
   * Defines bitmask values for different GNSS sentence parsing states.
   *-------------------------------------------------------------------------------*/
 #define GNSSPARSE_GGA       0001   /**< State: Parsing GGA sentence  */
+#define GNSSPARSE_RMC       0003
 #define GNSSPARSE_VTG       0002   /**< State: Parsing VTG sentence vel */
 #define GNSSPARSE_VEL       0002   /**< State: Parsing VEL sentence vel */
 #define GNSSPARSE_SBF4007   0002   /**< State: Parsing SBF4007 sentence vel */
@@ -99,7 +100,7 @@
 #define GNSSPARSE_ZDA       0010   /**< State: Parsing ZDA sentence date */
 #define GNSSPARSE_GST       0020   /**< State: Parsing GST sentence rms_pos */
 
-#define GNSSPARSE_PARSE_NOW 0037
+#define GNSSPARSE_PARSE_NOW 0033
 
 #define CHECK_GN_GP(ch_0,ch1)    ((ch_0 == 'G') && ((ch1 == 'P') || ch1 == 'N'))
 #define CHECK_UM_BEST(ch_0,ch1)  ((ch_0 == 'B') && (ch1 == 'E'))
@@ -687,6 +688,7 @@ typedef struct KFAPP_ConfigPara {
 	char srcfile_gnss[128];
     char pattern_extertion[24];
     int  last_label;
+    int  gnss_mask;
 //	char resfile_gnss[128];
 //	char srcfile_imu[128];
 //	char resfile_imu[128];
@@ -1392,7 +1394,7 @@ nav_info_t* nav_get(void);
 *-------------------------------------------------------------------------------*/
 int nav_parse(uint8_t ch1);
 
-int gnss_parse_by_file(const char* file_name_gnss, gnss_info_t* px_gnss, gnss_t* gnss_data, int last_label);
+int gnss_parse_by_file(const char* file_name_gnss, gnss_info_t* px_gnss, gnss_t* gnss_data, KFAPP_ConfigPara *ptr_config);
 
 int nav_parse_by_file(const char* file_name_imu, imu_info_t* px_imu, imu_t* imu_data);
 
